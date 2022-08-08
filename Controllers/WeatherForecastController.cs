@@ -1,5 +1,6 @@
 using System.Drawing;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Select_HtmlToPdf_NetCore.Utility;
 using SelectPdf;
 
@@ -14,10 +15,20 @@ public class WeatherForecastController : ControllerBase
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     };
 
+    private readonly AppOptions _appOptions;
+    private readonly PostgresOptions _postgresOptions;
+    private readonly RabbitmqOptions _rabbitmqOptions;
     private readonly ILogger<WeatherForecastController> _logger;
+    
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public WeatherForecastController(IOptions<AppOptions> appOptions,
+        IOptions<PostgresOptions> postgresOptions,
+        IOptions<RabbitmqOptions> rabbitmqOptions, 
+        ILogger<WeatherForecastController> logger)
     {
+        _appOptions = appOptions.Value;
+        _postgresOptions = postgresOptions.Value;
+        _rabbitmqOptions = rabbitmqOptions.Value;
         _logger = logger;
     }
 
@@ -63,4 +74,22 @@ public class WeatherForecastController : ControllerBase
             "membership-card.pdf"
         );
     }
+
+    [HttpGet("GetOptionsApp")]
+    public ActionResult GetOptions()
+    {
+        if (_appOptions.Environment.ToLower() == "production")
+        {
+            return Ok(new {
+                Rabbitmq = CryptExtension.Decrypt(_rabbitmqOptions.HostProdcution),
+                Postgres = CryptExtension.Decrypt(_postgresOptions.ConnectionStringProdcution)
+            });
+        }
+
+        return Ok(new {
+            Rabbitmq = CryptExtension.Decrypt(_rabbitmqOptions.HostTesting),
+            Postgres = CryptExtension.Decrypt(_postgresOptions.ConnectionStringTesting)
+        });
+    }
+
 }
